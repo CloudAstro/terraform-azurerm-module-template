@@ -1,3 +1,4 @@
+
 default_install_hook_types: [commit-msg, pre-commit]
 
 repos:
@@ -16,7 +17,7 @@ repos:
 
       # 📄 File formatting & consistency
       - id: end-of-file-fixer
-        exclude: ^README\.md$  # Avoid autofix loops with terraform-docs
+        exclude: (^|/)README\.md$  # Avoid autofix loops with terraform-docs
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
         exclude: ^CHANGELOG\.md$
@@ -24,8 +25,12 @@ repos:
         args: [--fix=lf]
       - id: check-executables-have-shebangs
       - id: check-case-conflict
+      - id: check-symlinks
+
+      # Structured Files
       - id: check-yaml
       - id: check-json
+      - id: check-byte-order-marker
       - id: check-toml
 
       # 🔐 Security
@@ -41,16 +46,32 @@ repos:
   - repo: https://github.com/tofuutils/pre-commit-opentofu
     rev: v2.2.0
     hooks:
+      - id: tfupdate
+        name: Autoupdate Terraform versions
+        args:
+          - --args=terraform
+          - --args=--recursive
+          - --args=--version 1.8.5
+
+      - id: tfupdate
+        name: Autoupdate provider azurerm versions
+        args:
+          - --args=provider azurerm
+          - --args=--recursive
+          - --args=--version 4.0.0
+
       - id: tofu_fmt
+        args:
+          - --args=-recursive
 
       - id: tofu_docs
         args:
-          - --args=--config=.terraform-docs.yml
           - --hook-config=--path-to-file=README.md
           - --hook-config=--add-to-existing-file=true
           - --hook-config=--create-file-if-not-exist=true
           - --hook-config=--use-standard-markers=true
-        exclude: examples
+        files: ^[^/]+/
+        exclude: ^examples
 
       - id: tofu_validate
         exclude: ^examples
@@ -66,8 +87,13 @@ repos:
 
       - id: tofu_trivy
         args:
-          - --args=--severity HIGH,CRITICAL
+          - --args=--severity LOW,MEDIUM,HIGH,CRITICAL
           - --args=--skip-dirs '**/.terraform'
+
+      - id: tofu_checkov
+        args:
+          - --args=--framework=terraform,terraform_plan,terraform_json
+          - --args=--check LOW,MEDIUM,HIGH,CRITICAL
 
   # ✅ Conventional Commit Enforcement
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
